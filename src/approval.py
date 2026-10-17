@@ -1,9 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Optional
 
 from .models import ApprovalRecord, DecisionPackage
 
@@ -18,12 +16,12 @@ class ApprovalGate:
         self,
         package: DecisionPackage,
         reviewer_name: str,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> ApprovalRecord:
         if not reviewer_name or reviewer_name.strip() == "":
             raise ValueError("Reviewer name is required to approve/reject a package.")
         package.reviewer_name = reviewer_name.strip()
-        package.reviewed_at = datetime.now(timezone.utc)
+        package.reviewed_at = datetime.now(UTC)
         package.status = "approved"
         package.approval_reason = reason
         record = ApprovalRecord(
@@ -40,12 +38,12 @@ class ApprovalGate:
         self,
         package: DecisionPackage,
         reviewer_name: str,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> ApprovalRecord:
         if not reviewer_name or reviewer_name.strip() == "":
             raise ValueError("Reviewer name is required to approve/reject a package.")
         package.reviewer_name = reviewer_name.strip()
-        package.reviewed_at = datetime.now(timezone.utc)
+        package.reviewed_at = datetime.now(UTC)
         package.status = "rejected"
         package.approval_reason = reason
         record = ApprovalRecord(

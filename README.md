@@ -1,36 +1,38 @@
 ﻿# AI Decision Package Builder
 
+![CI](https://github.com/AumSohoni/ai-decision-package-builder/actions/workflows/ci.yml/badge.svg)
+
 A tool that prepares a structured decision package for a human expert to review. The AI prepares, the human decides. This mirrors real-world risk governance: automation for preparation, accountability for approval.
 
 ## Problem statement
-Swisscom's risk management needs an AI-supported workflow where experts can review and assess risks asynchronously. The AI prepares structured decision packages combining completeness checks, expert perspectives, past decisions, and risk management best practices—keeping accountability with human stakeholders.
+Risk management needs an AI-supported workflow where experts can review and assess risks asynchronously. The AI prepares structured decision packages combining completeness checks, expert perspectives, past decisions, and risk management best practices, keeping accountability with human stakeholders.
 
 ## Features
-- **Risk case data model** (Pydantic) with RiskCase and DecisionPackage.
+- **Risk case data model** (Pydantic) with `RiskCase` and `DecisionPackage`.
 - **Completeness check (no AI)**: rule-based validation against a required-field checklist.
-- **Similar-case retrieval**: TF-IDF + cosine similarity (scikit-learn) to surface top 3 past decisions.
-- **LLM generation with guardrails**: generates a JSON decision package, validates with Pydantic, retries once on invalid output, and **only cites past case IDs that were retrieved**.
-- **Human approval gate**: requires reviewer name, records approve/reject with timestamp and reason in an append-only audit log (udit_log.jsonl).
+- **Similar-case retrieval**: TF-IDF + cosine similarity (scikit-learn) to surface the top 3 past decisions.
+- **LLM generation with guardrails**: generates a JSON decision package, validates with Pydantic, retries once on invalid output, and only cites past case IDs that were retrieved.
+- **Human approval gate**: requires a reviewer name, records approve/reject with timestamp and reason in an append-only audit log (`audit_log.jsonl`).
 - **Deterministic tests**: LLM mocked; edge cases covered (incomplete inputs, non-existent cited IDs, missing reviewer).
-- **CI**: GitHub Actions runs uff and pytest on push/PR.
+- **CI**: GitHub Actions runs `ruff` and `pytest` on push/PR.
 
 ## Architecture
-`	ext
+```text
 Risk Case (JSON)
   -> Completeness Check (rules)
   -> Similar Case Retrieval (TF-IDF)
   -> LLM (JSON-only, citations restricted to retrieved IDs)
   -> Decision Package (draft)
   -> Human Approval (required reviewer + audit log)
-`
+```
 
 ### Data flow
-1. Input RiskCase (JSON)
-2. checker.py validates required fields from data/checklist.json → CompletenessReport
-3. etriever.py embeds title+description+category against data/past_decisions.json → top 3 SimilarCase
-4. llm.py prompts model to return JSON matching DecisionPackage; validates schema, enforces cited IDs subset of retrieved IDs, retries once
-5. CLI writes package to out/decision_package_<id>.json and prompts for approval
-6. pproval.py writes append-only record to udit_log.jsonl; sets status pproved/ejected
+1. Input `RiskCase` (JSON)
+2. `checker.py` validates required fields from `data/checklist.json` -> `CompletenessReport`
+3. `retriever.py` compares title+description+category against `data/past_decisions.json` -> top 3 `SimilarCase`
+4. `llm.py` prompts the model to return JSON matching `DecisionPackage`; validates schema, enforces cited IDs are a subset of retrieved IDs, retries once
+5. CLI writes the package to `out/decision_package_<id>.json` and prompts for approval
+6. `approval.py` writes an append-only record to `audit_log.jsonl`; sets status `approved`/`rejected`
 
 ## What the AI does / does not do
 **Does:**
@@ -48,13 +50,13 @@ Risk Case (JSON)
 
 ## Human accountability
 - Approval/rejection **requires a reviewer name** (cannot be bypassed).
-- Each decision recorded in append-only udit_log.jsonl with: 	imestamp (UTC), package_id, isk_case_id, eviewer_name, ction (approve/reject), eason.
-- DecisionPackage stores eviewer_name, eviewed_at, pproval_reason, and status (draft|approved|rejected).
+- Each decision is recorded in the append-only `audit_log.jsonl` with: `timestamp` (UTC), `package_id`, `risk_case_id`, `reviewer_name`, `action` (approve/reject), `reason`.
+- `DecisionPackage` stores `reviewer_name`, `reviewed_at`, `approval_reason`, and `status` (`draft|approved|rejected`).
 - Packages cannot be marked approved without a reviewer name.
 
 ## Setup
 
-`ash
+```bash
 python -m venv .venv
 # Windows
 .venv\Scripts\activate
@@ -62,56 +64,56 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-`
+```
 
 ## Environment variables
 If using a real LLM (not mock):
-- OPENAI_API_KEY or ANTHROPIC_API_KEY
+- `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
 
-Create .env locally (never committed).
+Create a local `.env` (never committed); keys are read from the process environment.
 
 ## Usage
 
-Run with a sample risk case (uses mock LLM by default for deterministic run):
+Run with a sample risk case (uses the mock LLM by default for a deterministic run):
 
-`ash
+```bash
 python -m src.cli --input examples/sample.json --use-mock-llm
-`
+```
 
-Or without mock (requires API key):
+Or without the mock (requires an API key):
 
-`ash
+```bash
 python -m src.cli --input examples/sample.json
-`
+```
 
 Outputs:
-- out/decision_package_RC-001.json
-- Appends approval record to udit_log.jsonl
+- `out/decision_package_RC-001.json`
+- An appended approval record in `audit_log.jsonl`
 
-Example input: examples/sample.json. Mock data: data/past_decisions.json (15–20 fictional cases), data/checklist.json.
+Example input: `examples/sample.json`. Mock data: `data/past_decisions.json` (15-20 fictional cases), `data/checklist.json`.
 
 ## Tests
-`ash
+```bash
 pytest -q
-`
+```
 
 Covers:
 - Checker: complete, missing one, missing several
 - Retriever: returns top 3, obvious match ranks first
-- LLM: output validates; cited case IDs must exist in retrieved set
-- Approval: requires reviewer name; writes audit log; sets approved/rejected
+- LLM: output validates; cited case IDs must exist in the retrieved set
+- Approval: requires a reviewer name; writes audit log; sets approved/rejected
 
 ## Lint
-`ash
+```bash
 ruff check .
-`
+```
 
 ## CI
-GitHub Actions workflow: .github/workflows/ci.yml runs uff check . and pytest -q on push and PR. Add a status badge once CI runs:
+GitHub Actions workflow: `.github/workflows/ci.yml` runs `ruff check .` and `pytest -q` on push and PR. Badge:
 
-`markdown
-![CI](https://github.com/<your-org-or-user>/ai-decision-package-builder/actions/workflows/ci.yml/badge.svg)
-`
+```markdown
+![CI](https://github.com/AumSohoni/ai-decision-package-builder/actions/workflows/ci.yml/badge.svg)
+```
 
 ## Known limitations
 - TF-IDF similarity is simple (no semantic embeddings yet)
@@ -120,7 +122,7 @@ GitHub Actions workflow: .github/workflows/ci.yml runs uff check . and pytest -
 - CLI is interactive only (no batch mode)
 
 ## Next steps
-- Evaluation harness with 10 golden risk cases and simple scoring
+- Evaluation harness with 10 golden risk cases and a simple score tracked over time
 - Switch to embeddings + vector store (FAISS/Chroma) for better retrieval
 - Stronger JSON repair/guardrails and structured logging
 - Non-interactive CLI flags for CI/automation

@@ -1,17 +1,16 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import uuid
 from pathlib import Path
 
+from .approval import ApprovalGate
 from .checker import Checker
 from .llm import LLM, FakeLLMClient
-from .models import DecisionPackage, RiskCase
+from .models import RiskCase
 from .retriever import Retriever
-from .approval import ApprovalGate
 
 
 def load_risk_case(path: str | Path) -> RiskCase:

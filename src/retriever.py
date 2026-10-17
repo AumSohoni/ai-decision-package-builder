@@ -1,8 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -29,7 +28,7 @@ class Retriever:
         ]
         return " ".join(str(p) for p in parts).lower()
 
-    def retrieve(self, risk_case: RiskCase | dict, top_k: int = 3) -> List[SimilarCase]:
+    def retrieve(self, risk_case: RiskCase | dict, top_k: int = 3) -> list[SimilarCase]:
         if isinstance(risk_case, RiskCase):
             query_case = risk_case.model_dump(exclude_none=True)
         else:
@@ -45,7 +44,7 @@ class Retriever:
         sims = cosine_similarity(matrix[0:1], matrix[1:]).flatten()
         idxs = np.argsort(sims)[::-1][:top_k]
 
-        results: List[SimilarCase] = []
+        results: list[SimilarCase] = []
         for i in idxs:
             c = self.past_decisions[i]
             results.append(

@@ -1,11 +1,11 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import tempfile
 from pathlib import Path
 
 from src.approval import ApprovalGate
-from src.models import DecisionPackage, CompletenessReport
+from src.models import CompletenessReport, DecisionPackage
 
 
 def make_pkg():

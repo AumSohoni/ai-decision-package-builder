@@ -1,4 +1,4 @@
-﻿from src.models import RiskCase
+from src.models import RiskCase
 from src.retriever import Retriever
 
 
@@ -24,13 +24,14 @@ def test_retriever_returns_top3():
 
 
 def test_retriever_obvious_match_ranks_first():
-    # Find a case with similar terms
+    retriever = Retriever()
+    target = next(c for c in retriever.past_decisions if c["id"] == "PD-003")
     rc = RiskCase.model_validate({
         "id": "RC-201",
-        "title": "Past risk 1",
-        "description": "Description of past risk decision 1 involving access controls.",
-        "category": "access",
-        "severity": "medium",
+        "title": target["title"],
+        "description": target["description"],
+        "category": target["category"],
+        "severity": target["severity"],
         "owner": "o",
         "mitigation": "m",
         "impact": "med",
@@ -39,7 +40,6 @@ def test_retriever_obvious_match_ranks_first():
         "reported_date": "2025-10-17",
         "detection_method": "manual",
     })
-    res = Retriever().retrieve(rc, top_k=1)
+    res = retriever.retrieve(rc, top_k=1)
     assert len(res) == 1
-    # PD-001 should be similar
-    assert res[0].id == "PD-001"
+    assert res[0].id == "PD-003"

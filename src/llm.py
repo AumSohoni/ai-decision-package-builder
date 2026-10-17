@@ -1,19 +1,17 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import ValidationError
 
-from .models import CompletenessReport, DecisionPackage, RiskCase, SimilarCase, Status
+from .models import CompletenessReport, DecisionPackage, RiskCase, SimilarCase
 
 
 class FakeLLMClient:
-    def __init__(self, response: Dict[str, Any] | None = None):
+    def __init__(self, response: dict[str, Any] | None = None):
         self.response = response
         self.calls = 0
 
@@ -50,7 +48,7 @@ class LLM:
         self,
         risk_case: RiskCase | dict,
         completeness_report: CompletenessReport | dict,
-        similar_cases: List[SimilarCase] | List[dict],
+        similar_cases: list[SimilarCase] | list[dict],
     ) -> str:
         if isinstance(risk_case, RiskCase):
             rc = risk_case.model_dump()
@@ -84,104 +82,96 @@ class LLM:
             indent=2,
         )
 
+    def _call_client(self, prompt: str) -> str:
+        if self.client is None:
+            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise RuntimeError(
+                    "No LLM client provided and no API key found in environment."
+                )
+            if os.getenv("OPENAI_API_KEY"):
+                from openai import OpenAI
+
+                self.client = OpenAI()
+                resp = self.client.chat.completions.create(
+                    model=self.model,
+                    temperature=self.temperature,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"},
+                )
+                return resp.choices[0].message.content
+            from anthropic import Anthropic
+
+            self.client = Anthropic()
+            resp = self.client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                temperature=self.temperature,
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return resp.content[0].text if resp.content else "{}"
+
+        if hasattr(self.client, "generate"):
+            return self.client.generate(prompt)
+        if hasattr(self.client, "chat") and hasattr(self.client.chat, "completions"):
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                temperature=self.temperature,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+            )
+            return resp.choices[0].message.content
+        raise RuntimeError("Unsupported LLM client interface.")
+
     def generate_package(
         self,
         risk_case: RiskCase | dict,
         completeness_report: CompletenessReport | dict,
-        similar_cases: List[SimilarCase] | List[dict],
+        similar_cases: list[SimilarCase] | list[dict],
         max_retries: int = 1,
     ) -> DecisionPackage:
         prompt = self._build_prompt(risk_case, completeness_report, similar_cases)
 
+        retrieved_ids = set()
+        for s in similar_cases:
+            if isinstance(s, SimilarCase):
+                retrieved_ids.add(s.id)
+            else:
+                retrieved_ids.add(s.get("id"))
+
+        last_error: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                if self.client is None:
-                    # Try to use real clients if keys exist
-                    api_key = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
-                    if not api_key:
-                        raise RuntimeError(
-                            "No LLM client provided and no API key found in environment."
-                        )
-                    # For simplicity, default to OpenAI if OPENAI key present
-                    if os.getenv("OPENAI_API_KEY"):
-                        from openai import OpenAI
-
-                        self.client = OpenAI()
-                        resp = self.client.chat.completions.create(
-                            model=self.model,
-                            temperature=self.temperature,
-                            messages=[{"role": "user", "content": prompt}],
-                            response_format={"type": "json_object"},
-                        )
-                        content = resp.choices[0].message.content
-                    else:
-                        from anthropic import Anthropic
-
-                        self.client = Anthropic()
-                        resp = self.client.messages.create(
-                            model="claude-3-5-sonnet-20241022",
-                            temperature=self.temperature,
-                            max_tokens=2048,
-                            messages=[{"role": "user", "content": prompt}],
-                        )
-                        # Anthropic returns content blocks
-                        content = resp.content[0].text if resp.content else "{}"
-                else:
-                    # Assume client has generate(prompt) or is OpenAI-like; support FakeLLMClient
-                    if hasattr(self.client, "generate"):
-                        content = self.client.generate(prompt)
-                    elif hasattr(self.client, "chat") and hasattr(
-                        self.client.chat, "completions"
-                    ):
-                        resp = self.client.chat.completions.create(
-                            model=self.model,
-                            temperature=self.temperature,
-                            messages=[{"role": "user", "content": prompt}],
-                            response_format={"type": "json_object"},
-                        )
-                        content = resp.choices[0].message.content
-                    else:
-                        raise RuntimeError("Unsupported LLM client interface.")
-            except Exception as e:
-                if attempt == max_retries:
-                    raise e
-                continue  # retry
-
-            try:
+                content = self._call_client(prompt)
                 data = json.loads(content)
-            except json.JSONDecodeError as e:
+            except Exception as e:
+                last_error = e
                 if attempt == max_retries:
                     raise e
-                continue  # retry
+                continue
 
-            # Enforce: only cited ids from retrieved set
-            retrieved_ids = set()
-            for s in similar_cases:
-                if isinstance(s, SimilarCase):
-                    retrieved_ids.add(s.id)
-                else:
-                    retrieved_ids.add(s.get("id"))
             cited = data.get("similar_cases", [])
-            for c in cited:
-                cid = c.get("id") if isinstance(c, dict) else None
-                if cid and cid not in retrieved_ids:
-                    if attempt == max_retries:
-                        raise ValueError(
-                            f"Cited case id '{cid}' not in retrieved similar cases set."
-                        )
-                    # Try to regenerate
-                    data["similar_cases"] = []
-                    data["status"] = "draft"
-                    content = json.dumps(data)
-                    # Let validation catch if needed; retry loop will re-parse/validate
-                    continue
+            invalid_ids = [
+                c.get("id")
+                for c in cited
+                if isinstance(c, dict)
+                and c.get("id")
+                and c.get("id") not in retrieved_ids
+            ]
+            if invalid_ids:
+                last_error = ValueError(
+                    f"Cited case id(s) {invalid_ids} not in retrieved similar cases set."
+                )
+                if attempt == max_retries:
+                    raise last_error
+                continue
 
             try:
-                pkg = DecisionPackage.model_validate(data)
+                return DecisionPackage.model_validate(data)
             except ValidationError as e:
+                last_error = e
                 if attempt == max_retries:
                     raise e
-                continue  # retry
-            return pkg
+                continue
 
-        raise RuntimeError("Failed to generate valid decision package.")
+        raise last_error or RuntimeError("Failed to generate valid decision package.")

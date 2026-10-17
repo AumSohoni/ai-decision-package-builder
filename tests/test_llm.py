@@ -1,4 +1,3 @@
-﻿import json
 
 from src.checker import Checker
 from src.llm import LLM, FakeLLMClient
@@ -48,7 +47,6 @@ def test_llm_cited_ids_must_exist():
     rc = make_case()
     cr = Checker().check(rc)
     sc = Retriever().retrieve(rc, top_k=2)
-    retrieved_ids = {s.id for s in sc}
     bad = {
         "package_id": "PKG-BAD",
         "risk_case_id": rc.id,

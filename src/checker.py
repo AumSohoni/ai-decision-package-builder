@@ -1,7 +1,6 @@
-﻿import json
-import os
+import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from .models import CompletenessReport, MissingField, RiskCase
 
@@ -14,7 +13,7 @@ class Checker:
         with self.checklist_path.open("r", encoding="utf-8") as f:
             self.checklist = json.load(f)
 
-    def check(self, risk_case: RiskCase | Dict[str, Any]) -> CompletenessReport:
+    def check(self, risk_case: RiskCase | dict[str, Any]) -> CompletenessReport:
         if isinstance(risk_case, RiskCase):
             case_dict = risk_case.model_dump(exclude_none=True)
         else:
@@ -23,7 +22,7 @@ class Checker:
         required = self.checklist.get("required", [])
         explain = self.checklist.get("explain", {})
 
-        missing: List[MissingField] = []
+        missing: list[MissingField] = []
         for field in required:
             if field not in case_dict or case_dict.get(field) in (None, "", []):
                 missing.append(

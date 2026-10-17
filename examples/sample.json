@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "RC-001",
   "title": "API key exposure in logs",
   "description": "API keys detected in application log files during routine scan.",
