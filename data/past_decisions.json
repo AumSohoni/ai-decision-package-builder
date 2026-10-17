@@ -1,0 +1,222 @@
+[
+  {
+    "id": "PD-001",
+    "title": "Past risk 1",
+    "description": "Description of past risk decision 1 involving network controls.",
+    "category": "network",
+    "severity": "critical",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 1.",
+    "mitigated_by": "existing controls",
+    "date": "2024-02-02"
+  },
+  {
+    "id": "PD-002",
+    "title": "Past risk 2",
+    "description": "Description of past risk decision 2 involving data controls.",
+    "category": "data",
+    "severity": "high",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 2.",
+    "mitigated_by": "existing controls",
+    "date": "2024-03-03"
+  },
+  {
+    "id": "PD-003",
+    "title": "Past risk 3",
+    "description": "Description of past risk decision 3 involving vendor controls.",
+    "category": "vendor",
+    "severity": "medium",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 3.",
+    "mitigated_by": "existing controls",
+    "date": "2024-04-04"
+  },
+  {
+    "id": "PD-004",
+    "title": "Past risk 4",
+    "description": "Description of past risk decision 4 involving appsec controls.",
+    "category": "appsec",
+    "severity": "low",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 4.",
+    "mitigated_by": "existing controls",
+    "date": "2024-05-05"
+  },
+  {
+    "id": "PD-005",
+    "title": "Past risk 5",
+    "description": "Description of past risk decision 5 involving infra controls.",
+    "category": "infra",
+    "severity": "critical",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 5.",
+    "mitigated_by": "existing controls",
+    "date": "2024-06-06"
+  },
+  {
+    "id": "PD-006",
+    "title": "Past risk 6",
+    "description": "Description of past risk decision 6 involving access controls.",
+    "category": "access",
+    "severity": "high",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 6.",
+    "mitigated_by": "existing controls",
+    "date": "2024-07-07"
+  },
+  {
+    "id": "PD-007",
+    "title": "Past risk 7",
+    "description": "Description of past risk decision 7 involving network controls.",
+    "category": "network",
+    "severity": "medium",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 7.",
+    "mitigated_by": "existing controls",
+    "date": "2024-08-08"
+  },
+  {
+    "id": "PD-008",
+    "title": "Past risk 8",
+    "description": "Description of past risk decision 8 involving data controls.",
+    "category": "data",
+    "severity": "low",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 8.",
+    "mitigated_by": "existing controls",
+    "date": "2024-09-09"
+  },
+  {
+    "id": "PD-009",
+    "title": "Past risk 9",
+    "description": "Description of past risk decision 9 involving vendor controls.",
+    "category": "vendor",
+    "severity": "critical",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 9.",
+    "mitigated_by": "existing controls",
+    "date": "2024-10-10"
+  },
+  {
+    "id": "PD-010",
+    "title": "Past risk 10",
+    "description": "Description of past risk decision 10 involving appsec controls.",
+    "category": "appsec",
+    "severity": "high",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 10.",
+    "mitigated_by": "existing controls",
+    "date": "2024-11-11"
+  },
+  {
+    "id": "PD-011",
+    "title": "Past risk 11",
+    "description": "Description of past risk decision 11 involving infra controls.",
+    "category": "infra",
+    "severity": "medium",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 11.",
+    "mitigated_by": "existing controls",
+    "date": "2024-12-12"
+  },
+  {
+    "id": "PD-012",
+    "title": "Past risk 12",
+    "description": "Description of past risk decision 12 involving access controls.",
+    "category": "access",
+    "severity": "low",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 12.",
+    "mitigated_by": "existing controls",
+    "date": "2024-01-13"
+  },
+  {
+    "id": "PD-013",
+    "title": "Past risk 13",
+    "description": "Description of past risk decision 13 involving network controls.",
+    "category": "network",
+    "severity": "critical",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 13.",
+    "mitigated_by": "existing controls",
+    "date": "2024-02-14"
+  },
+  {
+    "id": "PD-014",
+    "title": "Past risk 14",
+    "description": "Description of past risk decision 14 involving data controls.",
+    "category": "data",
+    "severity": "high",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 14.",
+    "mitigated_by": "existing controls",
+    "date": "2024-03-15"
+  },
+  {
+    "id": "PD-015",
+    "title": "Past risk 15",
+    "description": "Description of past risk decision 15 involving vendor controls.",
+    "category": "vendor",
+    "severity": "medium",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 15.",
+    "mitigated_by": "existing controls",
+    "date": "2024-04-16"
+  },
+  {
+    "id": "PD-016",
+    "title": "Past risk 16",
+    "description": "Description of past risk decision 16 involving appsec controls.",
+    "category": "appsec",
+    "severity": "low",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 16.",
+    "mitigated_by": "existing controls",
+    "date": "2024-05-17"
+  },
+  {
+    "id": "PD-017",
+    "title": "Past risk 17",
+    "description": "Description of past risk decision 17 involving infra controls.",
+    "category": "infra",
+    "severity": "critical",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 17.",
+    "mitigated_by": "existing controls",
+    "date": "2024-06-18"
+  },
+  {
+    "id": "PD-018",
+    "title": "Past risk 18",
+    "description": "Description of past risk decision 18 involving access controls.",
+    "category": "access",
+    "severity": "high",
+    "outcome": "rejected",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 18.",
+    "mitigated_by": "existing controls",
+    "date": "2024-07-19"
+  },
+  {
+    "id": "PD-019",
+    "title": "Past risk 19",
+    "description": "Description of past risk decision 19 involving network controls.",
+    "category": "network",
+    "severity": "medium",
+    "outcome": "approved with conditions",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 19.",
+    "mitigated_by": "existing controls",
+    "date": "2024-08-20"
+  },
+  {
+    "id": "PD-020",
+    "title": "Past risk 20",
+    "description": "Description of past risk decision 20 involving data controls.",
+    "category": "data",
+    "severity": "low",
+    "outcome": "approved mitigation",
+    "reasoning": "Controls were evaluated; residual risk deemed acceptable in context for case 20.",
+    "mitigated_by": "existing controls",
+    "date": "2024-09-21"
+  }
+]

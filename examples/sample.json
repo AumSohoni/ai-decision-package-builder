@@ -1,0 +1,14 @@
+﻿{
+  "id": "RC-001",
+  "title": "API key exposure in logs",
+  "description": "API keys detected in application log files during routine scan.",
+  "category": "data",
+  "severity": "high",
+  "owner": "alice",
+  "mitigation": "rotate keys and redact logs",
+  "impact": "high",
+  "likelihood": "medium",
+  "affected_assets": ["logging_service", "api_gateway"],
+  "reported_date": "2025-10-15",
+  "detection_method": "automated_scan"
+}

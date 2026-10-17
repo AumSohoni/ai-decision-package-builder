@@ -1,0 +1,22 @@
+﻿{
+  "required": [
+    "id",
+    "title",
+    "description",
+    "category",
+    "severity",
+    "owner",
+    "mitigation",
+    "impact",
+    "likelihood",
+    "affected_assets",
+    "reported_date",
+    "detection_method"
+  ],
+  "explain": {
+    "impact": "Needed to judge business or technical consequence.",
+    "likelihood": "Needed to estimate risk exposure.",
+    "affected_assets": "Defines the scope of impact.",
+    "mitigation": "Existing or planned control measures."
+  }
+}
