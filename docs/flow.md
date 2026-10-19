@@ -5,8 +5,8 @@
 3. **Retrieval**: TF-IDF ranks past decisions from `data/past_decisions.json`; return the top 3.
 4. **Generation**: LLM produces a `DecisionPackage` JSON (status=draft), restricted to retrieved case IDs.
 5. **Validation**: Pydantic validates the output; retry once on failure; enforce the citation whitelist.
-6. **Review**: A human provides a reviewer name, an action (approve/reject), and an optional reason.
-7. **Audit**: An append-only record is written to `audit_log.jsonl`; the package status is updated.
+6. **Review**: A human provides a reviewer name, an action (approve/reject), and an optional reason. This can be interactive or passed as flags (`--reviewer`, `--action`, `--reason`).
+7. **Audit**: An append-only record is written to `audit_log.jsonl`; the package status is updated and written back to the output file.
 
 ## Guardrails
 - The model may only cite past case IDs that were retrieved.

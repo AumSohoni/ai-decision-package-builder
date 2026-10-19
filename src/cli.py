@@ -9,7 +9,7 @@ from pathlib import Path
 from .approval import ApprovalGate
 from .checker import Checker
 from .llm import LLM, FakeLLMClient
-from .models import RiskCase
+from .models import DecisionPackage, RiskCase
 from .retriever import Retriever
 
 
@@ -17,6 +17,46 @@ def load_risk_case(path: str | Path) -> RiskCase:
     with Path(path).open("r", encoding="utf-8") as f:
         data = json.load(f)
     return RiskCase.model_validate(data)
+
+
+def normalize_action(value: str) -> str:
+    value = value.strip().lower()
+    if value in ("approve", "approved", "a"):
+        return "approve"
+    if value in ("reject", "rejected", "r"):
+        return "reject"
+    raise ValueError(f"Invalid action: {value!r}. Use 'approve' or 'reject'.")
+
+
+def resolve_review(args: argparse.Namespace) -> tuple[str, str, str | None] | None:
+    """Resolve the human review decision.
+
+    Returns (reviewer, action, reason) or None if the user aborted.
+    When --reviewer and --action are both supplied, runs fully non-interactive.
+    """
+    reviewer = (args.reviewer or "").strip()
+    action = normalize_action(args.action) if args.action else ""
+    reason = args.reason
+
+    if reviewer and action:
+        return reviewer, action, reason
+
+    try:
+        if not reviewer:
+            reviewer = input("Enter reviewer name: ").strip()
+        while action not in ("approve", "reject"):
+            action = normalize_action(
+                input("Approve or reject? (approve/reject): ")
+            )
+        if reason is None:
+            reason = input("Reason (optional): ").strip() or None
+    except EOFError:
+        return None
+    except KeyboardInterrupt:
+        print("\nAborted.")
+        return None
+
+    return reviewer, action, reason
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,6 +69,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--out", default="out", help="Output directory for decision package")
     parser.add_argument("--audit-log", default=None, help="Path to audit log JSONL")
+    parser.add_argument(
+        "--reviewer",
+        default=None,
+        help="Reviewer name (with --action runs non-interactively)",
+    )
+    parser.add_argument(
+        "--action",
+        default=None,
+        choices=["approve", "reject"],
+        help="Decision to apply without prompting",
+    )
+    parser.add_argument("--reason", default=None, help="Reason for the decision")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out)
@@ -47,7 +99,6 @@ def main(argv: list[str] | None = None) -> int:
     similar_cases = retriever.retrieve(risk_case, top_k=3)
 
     if args.use_mock_llm:
-        # Build a sensible mock package
         pkg_dict = {
             "package_id": f"PKG-{uuid.uuid4().hex[:8].upper()}",
             "risk_case_id": risk_case.id,
@@ -61,7 +112,6 @@ def main(argv: list[str] | None = None) -> int:
             ],
             "status": "draft",
         }
-        # Enforce only retrieved ids
         retrieved_ids = {s.id for s in similar_cases}
         pkg_dict["similar_cases"] = [
             s for s in pkg_dict["similar_cases"] if s["id"] in retrieved_ids
@@ -78,32 +128,15 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     pkg_path = out_dir / f"decision_package_{risk_case.id}.json"
-    with pkg_path.open("w", encoding="utf-8") as f:
-        f.write(package.model_dump_json(indent=2))
-
+    _write_package(pkg_path, package)
     print(f"Decision package written to: {pkg_path}")
 
-    # Human approval gate (interactive)
-    try:
-        reviewer = input("Enter reviewer name: ").strip()
-    except EOFError:
-        reviewer = ""
-    except KeyboardInterrupt:
-        print("\nAborted.")
+    decision = resolve_review(args)
+    if decision is None:
+        print("No review recorded; package remains a draft.", file=sys.stderr)
         return 0
 
-    action = ""
-    while action not in ("approve", "reject"):
-        try:
-            action = input("Approve or reject? (approve/reject): ").strip().lower()
-        except EOFError:
-            return 0
-        except KeyboardInterrupt:
-            print("\nAborted.")
-            return 0
-
-    reason = input("Reason (optional): ").strip() or None
-
+    reviewer, action, reason = decision
     gate = ApprovalGate(audit_log_path=args.audit_log) if args.audit_log else ApprovalGate()
     try:
         if action == "approve":
@@ -116,7 +149,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Approval failed: {e}", file=sys.stderr)
         return 1
 
+    _write_package(pkg_path, package)
+    print(f"Package status updated to '{package.status}' in: {pkg_path}")
+
     return 0
+
+
+def _write_package(path: Path, package: DecisionPackage) -> None:
+    with path.open("w", encoding="utf-8") as f:
+        f.write(package.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

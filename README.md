@@ -86,8 +86,14 @@ Or without the mock (requires an API key):
 python -m src.cli --input examples/sample.json
 ```
 
+Non-interactive (skips the prompts; useful for demos and CI):
+
+```bash
+python -m src.cli --input examples/sample.json --use-mock-llm --reviewer "Jane Doe" --action approve --reason "matches past case PD-008"
+```
+
 Outputs:
-- `out/decision_package_RC-001.json`
+- `out/decision_package_RC-001.json` (status, reviewer, timestamp, and reason are written back after the review)
 - An appended approval record in `audit_log.jsonl`
 
 Example input: `examples/sample.json`. Mock data: `data/past_decisions.json` (15-20 fictional cases), `data/checklist.json`.
@@ -102,6 +108,7 @@ Covers:
 - Retriever: returns top 3, obvious match ranks first
 - LLM: output validates; cited case IDs must exist in the retrieved set
 - Approval: requires a reviewer name; writes audit log; sets approved/rejected
+- CLI: non-interactive approve/reject persists status; no review leaves the package as a draft
 
 ## Lint
 ```bash
@@ -119,11 +126,10 @@ GitHub Actions workflow: `.github/workflows/ci.yml` runs `ruff check .` and `pyt
 - TF-IDF similarity is simple (no semantic embeddings yet)
 - LLM retry is limited to 1 attempt
 - Mock dataset is fictional and small
-- CLI is interactive only (no batch mode)
+- A real run still needs an API key and network access
 
 ## Next steps
 - Evaluation harness with 10 golden risk cases and a simple score tracked over time
 - Switch to embeddings + vector store (FAISS/Chroma) for better retrieval
 - Stronger JSON repair/guardrails and structured logging
-- Non-interactive CLI flags for CI/automation
 - Export to PDF/Markdown for expert review

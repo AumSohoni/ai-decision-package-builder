@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .models import ApprovalRecord, DecisionPackage
+from .models import ApprovalRecord, DecisionPackage, Status
 
 
 class ApprovalGate:
@@ -18,21 +18,7 @@ class ApprovalGate:
         reviewer_name: str,
         reason: str | None = None,
     ) -> ApprovalRecord:
-        if not reviewer_name or reviewer_name.strip() == "":
-            raise ValueError("Reviewer name is required to approve/reject a package.")
-        package.reviewer_name = reviewer_name.strip()
-        package.reviewed_at = datetime.now(UTC)
-        package.status = "approved"
-        package.approval_reason = reason
-        record = ApprovalRecord(
-            package_id=package.package_id,
-            risk_case_id=package.risk_case_id,
-            reviewer_name=package.reviewer_name,
-            action="approve",
-            reason=reason,
-        )
-        self._write(record)
-        return record
+        return self._decide(package, reviewer_name, Status.approved, "approve", reason)
 
     def reject(
         self,
@@ -40,17 +26,27 @@ class ApprovalGate:
         reviewer_name: str,
         reason: str | None = None,
     ) -> ApprovalRecord:
+        return self._decide(package, reviewer_name, Status.rejected, "reject", reason)
+
+    def _decide(
+        self,
+        package: DecisionPackage,
+        reviewer_name: str,
+        status: Status,
+        action: str,
+        reason: str | None,
+    ) -> ApprovalRecord:
         if not reviewer_name or reviewer_name.strip() == "":
             raise ValueError("Reviewer name is required to approve/reject a package.")
         package.reviewer_name = reviewer_name.strip()
         package.reviewed_at = datetime.now(UTC)
-        package.status = "rejected"
+        package.status = status
         package.approval_reason = reason
         record = ApprovalRecord(
             package_id=package.package_id,
             risk_case_id=package.risk_case_id,
             reviewer_name=package.reviewer_name,
-            action="reject",
+            action=action,
             reason=reason,
         )
         self._write(record)

@@ -32,7 +32,8 @@ Status legend: [x] done in scaffold, [ ] to do.
 - [x] `src/approval.py` approve/reject, requires reviewer name, append-only `audit_log.jsonl`
 - [x] `src/cli.py` end-to-end flow
 - [x] Tests: approval cannot bypass reviewer; audit log written
-- [ ] Add non-interactive flags (`--approve-as`, `--reject`, `--reason`)
+- [x] Non-interactive flags (`--reviewer`, `--action`, `--reason`)
+- [x] Package file re-written after the review so status/reviewer persist
 
 ## Day 6 - CI and README
 - [x] `.github/workflows/ci.yml` (ruff + pytest on push/PR)
