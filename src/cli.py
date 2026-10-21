@@ -3,14 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import uuid
 from pathlib import Path
 
 from .approval import ApprovalGate
-from .checker import Checker
-from .llm import LLM, FakeLLMClient
 from .models import DecisionPackage, RiskCase
-from .retriever import Retriever
+from .pipeline import analyze_risk_case
 
 
 def load_risk_case(path: str | Path) -> RiskCase:
@@ -92,40 +89,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Failed to load risk case: {e}", file=sys.stderr)
         return 1
 
-    checker = Checker()
-    completeness_report = checker.check(risk_case)
-
-    retriever = Retriever()
-    similar_cases = retriever.retrieve(risk_case, top_k=3)
-
-    if args.use_mock_llm:
-        pkg_dict = {
-            "package_id": f"PKG-{uuid.uuid4().hex[:8].upper()}",
-            "risk_case_id": risk_case.id,
-            "summary": f"Summary for {risk_case.title}.",
-            "completeness_report": completeness_report.model_dump(),
-            "missing_information": [m.field for m in completeness_report.missing],
-            "similar_cases": [s.model_dump() for s in similar_cases],
-            "questions_for_experts": [
-                "Is the proposed mitigation sufficient given severity?",
-                "Are there additional affected assets to consider?",
-            ],
-            "status": "draft",
-        }
-        retrieved_ids = {s.id for s in similar_cases}
-        pkg_dict["similar_cases"] = [
-            s for s in pkg_dict["similar_cases"] if s["id"] in retrieved_ids
-        ]
-        client = FakeLLMClient(pkg_dict)
-        llm = LLM(client=client)
-    else:
-        llm = LLM()
-
     try:
-        package = llm.generate_package(risk_case, completeness_report, similar_cases)
+        analysis = analyze_risk_case(risk_case, use_mock_llm=args.use_mock_llm)
     except Exception as e:
         print(f"Failed to generate decision package: {e}", file=sys.stderr)
         return 1
+
+    package = analysis.package
 
     pkg_path = out_dir / f"decision_package_{risk_case.id}.json"
     _write_package(pkg_path, package)

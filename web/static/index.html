@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decision Desk — Risk review</title>
+  <meta name="description" content="AI-prepared decision packages for human review. AI prepares. Humans decide.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='6' fill='%23121714'/%3E%3Cpath d='M8 9.5h12M8 14h12M8 18.5h7' stroke='%23e6ebe5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="shell">
+    <aside class="rail">
+      <div class="rail-brand">
+        <svg class="mark" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="1.25" y="1.25" width="25.5" height="25.5" rx="6" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 9.5h12M8 14h12M8 18.5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-name">Decision Desk</span>
+          <span class="brand-sub">Risk review console</span>
+        </div>
+      </div>
+
+      <nav class="rail-nav" aria-label="Sections">
+        <button class="rail-link is-active" type="button" data-nav="intake">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 3h8l4 4v10H4V3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 3v4h4M7 11h6M7 14h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Intake</span>
+        </button>
+        <button class="rail-link" type="button" data-nav="analysis" disabled>
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16V9M8 16V4M13 16v-5M18 16V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Analysis</span>
+          <span class="rail-count" id="count-similar" hidden></span>
+        </button>
+        <button class="rail-link" type="button" data-nav="review" disabled>
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Review</span>
+          <span class="rail-dot" id="status-dot" hidden></span>
+        </button>
+        <button class="rail-link" type="button" data-nav="audit">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M10 6v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Audit log</span>
+          <span class="rail-count" id="count-audit" hidden></span>
+        </button>
+      </nav>
+
+      <div class="rail-foot">
+        <p class="rail-motto">AI prepares.<br>Humans decide.</p>
+        <p class="rail-meta"><span class="mono" id="model-badge">mock model</span><br>20 fictional past decisions</p>
+      </div>
+    </aside>
+
+    <main class="work" id="main">
+      <header class="work-head">
+        <div class="head-copy">
+          <h1>New risk review</h1>
+          <p class="work-sub">Describe the risk. The console checks completeness, finds precedent, and drafts the package for your decision.</p>
+        </div>
+        <div class="head-aside">
+          <span class="status-chip" id="status-chip" data-state="draft">Draft</span>
+        </div>
+      </header>
+
+      <ol class="steps" aria-label="Review progress">
+        <li class="step is-current" data-step="intake"><span class="step-mark">1</span><span>Intake</span></li>
+        <li class="step" data-step="analysis"><span class="step-mark">2</span><span>Analysis</span></li>
+        <li class="step" data-step="review"><span class="step-mark">3</span><span>Review</span></li>
+      </ol>
+
+      <!-- INTAKE -->
+      <section class="panel is-active" id="panel-intake" aria-labelledby="intake-title">
+        <div class="panel-head">
+          <h2 id="intake-title">Risk case</h2>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="load-sample" type="button">Load example</button>
+          </div>
+        </div>
+
+        <form id="risk-form" novalidate>
+          <div class="field-grid">
+            <label class="field field-wide">
+              <span class="field-label">Title</span>
+              <input name="title" type="text" autocomplete="off" placeholder="e.g. API key exposure in logs" required>
+            </label>
+            <label class="field">
+              <span class="field-label">Case ID</span>
+              <input name="id" type="text" autocomplete="off" placeholder="RC-001" required>
+            </label>
+            <label class="field">
+              <span class="field-label">Category</span>
+              <select name="category" required>
+                <option value="" selected disabled>Select</option>
+                <option value="access">Access</option>
+                <option value="network">Network</option>
+                <option value="data">Data</option>
+                <option value="vendor">Vendor</option>
+                <option value="appsec">Application security</option>
+                <option value="infra">Infrastructure</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Severity</span>
+              <select name="severity" required>
+                <option value="" selected disabled>Select</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">Owner</span>
+              <input name="owner" type="text" autocomplete="off" placeholder="Team or person" required>
+            </label>
+            <label class="field field-wide">
+              <span class="field-label">Description</span>
+              <textarea name="description" rows="3" placeholder="What happened, where, and how it was found." required></textarea>
+            </label>
+            <label class="field field-wide">
+              <span class="field-label">Proposed mitigation</span>
+              <textarea name="mitigation" rows="2" placeholder="Existing or planned controls." required></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">Impact <span class="field-optional">optional</span></span>
+              <input name="impact" type="text" autocomplete="off" placeholder="e.g. high">
+            </label>
+            <label class="field">
+              <span class="field-label">Likelihood <span class="field-optional">optional</span></span>
+              <input name="likelihood" type="text" autocomplete="off" placeholder="e.g. medium">
+            </label>
+            <label class="field">
+              <span class="field-label">Affected assets <span class="field-optional">optional</span></span>
+              <input name="affected_assets" type="text" autocomplete="off" placeholder="comma separated">
+            </label>
+            <label class="field">
+              <span class="field-label">Reported date <span class="field-optional">optional</span></span>
+              <input name="reported_date" type="date">
+            </label>
+            <label class="field">
+              <span class="field-label">Detection method <span class="field-optional">optional</span></span>
+              <input name="detection_method" type="text" autocomplete="off" placeholder="e.g. automated scan">
+            </label>
+          </div>
+
+          <div class="form-foot">
+            <p class="form-hint">Blank optional fields are reported by the completeness check, not blocked.</p>
+            <button class="btn btn-primary" type="submit" id="analyze-btn">Analyze risk</button>
+          </div>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+        </form>
+      </section>
+
+      <!-- ANALYSIS -->
+      <section class="panel" id="panel-analysis" aria-labelledby="analysis-title" hidden>
+        <div class="panel-head">
+          <h2 id="analysis-title">Analysis</h2>
+          <span class="mono panel-tag" id="package-tag"></span>
+        </div>
+
+        <div class="analysis-block">
+          <h3>Completeness</h3>
+          <div class="complete">
+            <p class="complete-score"><span id="score-value">—</span><span class="complete-unit">%</span></p>
+            <div class="complete-body">
+              <p class="complete-summary" id="complete-summary"></p>
+              <div class="meter" aria-hidden="true">
+                <span class="meter-fill" id="score-bar"></span>
+              </div>
+            </div>
+          </div>
+          <ul class="missing-list" id="missing-list"></ul>
+        </div>
+
+        <div class="analysis-block">
+          <h3>Precedent <span class="block-note" id="similar-note"></span></h3>
+          <ul class="similar-list" id="similar-list"></ul>
+        </div>
+
+        <div class="analysis-block">
+          <h3>Draft package</h3>
+          <p class="summary" id="package-summary"></p>
+          <div class="split">
+            <div class="split-col">
+              <h4>Missing information</h4>
+              <ul class="tag-list" id="missing-info"></ul>
+            </div>
+            <div class="split-col">
+              <h4>Questions for experts</h4>
+              <ol class="question-list" id="questions"></ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="analysis-foot">
+          <p class="foot-note">Only retrieved precedent is cited. The draft is never an approval.</p>
+          <button class="btn btn-primary" type="button" id="to-review">Continue to review</button>
+        </div>
+      </section>
+
+      <!-- REVIEW -->
+      <section class="panel" id="panel-review" aria-labelledby="review-title" hidden>
+        <div class="panel-head">
+          <h2 id="review-title">Your decision</h2>
+          <span class="status-chip" id="review-status" data-state="draft">Draft</span>
+        </div>
+        <p class="review-intro">Approval is recorded against your name. The AI prepared this package; it cannot approve it. You remain accountable for the call.</p>
+
+        <div class="decision" id="decision-box">
+          <div class="decision-fields">
+            <label class="field">
+              <span class="field-label">Reviewer name <span class="field-required">required</span></span>
+              <input id="reviewer" type="text" autocomplete="name" placeholder="Who is deciding?">
+            </label>
+            <label class="field">
+              <span class="field-label">Reason <span class="field-optional">optional</span></span>
+              <input id="reason" type="text" autocomplete="off" placeholder="Why this decision?">
+            </label>
+          </div>
+          <div class="decision-actions">
+            <button class="btn btn-primary" type="button" id="approve-btn">Approve package</button>
+            <button class="btn btn-danger" type="button" id="reject-btn">Reject package</button>
+          </div>
+          <p class="form-error" id="review-error" role="alert" hidden></p>
+        </div>
+
+        <div class="stamp" id="stamp" hidden>
+          <div class="stamp-mark" id="stamp-mark" aria-hidden="true"></div>
+          <div class="stamp-body">
+            <p class="stamp-title" id="stamp-title"></p>
+            <p class="stamp-meta" id="stamp-meta"></p>
+            <p class="stamp-reason" id="stamp-reason"></p>
+          </div>
+        </div>
+
+        <div class="analysis-foot">
+          <p class="foot-note">The audit log is append-only. A new review starts a new package.</p>
+          <button class="btn btn-ghost" type="button" id="new-review">Start a new review</button>
+        </div>
+      </section>
+
+      <!-- AUDIT -->
+      <section class="panel" id="panel-audit" aria-labelledby="audit-title" hidden>
+        <div class="panel-head">
+          <h2 id="audit-title">Audit log</h2>
+          <span class="mono panel-tag">append-only</span>
+        </div>
+        <p class="review-intro">Every approval and rejection is written here with who, when, and why.</p>
+
+        <div class="table-wrap">
+          <table class="audit-table" id="audit-table">
+            <caption class="sr-only">Recorded decisions, newest first</caption>
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Package</th>
+                <th scope="col">Reviewer</th>
+                <th scope="col">Decision</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody id="audit-body"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="audit-empty">
+          <p class="empty-title">No decisions recorded yet</p>
+          <p class="empty-body">Approve or reject a package and the entry appears here. The log is append-only, so history is never rewritten.</p>
+        </div>
+      </section>
+
+      <footer class="work-foot">
+        <span>Decision Desk</span>
+        <span class="mono">AI prepares · humans decide</span>
+      </footer>
+    </main>
+  </div>
+
+  <div class="sr-status" id="live-status" role="status" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -45,10 +45,18 @@ Status legend: [x] done in scaffold, [ ] to do.
 - [ ] Tighten README wording (this is what reviewers read first)
 - [ ] (Stretch) evaluation harness: 10 golden cases + tracked score
 
+## Day 8 - Web console
+- [x] `src/pipeline.py` shared `analyze_risk_case` so CLI and web stay in sync
+- [x] `web/app.py` FastAPI endpoints: past decisions, analyze, review, audit
+- [x] Single-page console (`web/static/`) with intake, analysis, review, and audit views
+- [x] `tests/test_web.py` covers the endpoints with an isolated audit log
+- [ ] (Stretch) persist packages to a store instead of in-memory
+- [ ] (Stretch) stream the LLM response instead of a single request
+
 ## Stretch - Evaluation harness
 - [ ] `eval/golden_cases.json` with expected properties
 - [ ] Runner that calls the real model and scores results
 - [ ] Commit a score history to show QA applied to an AI system
 
 ## Definition of done
-A stranger can clone the repo, run one command, see a decision package generated from sample input, approve it, and see the audit log entry.
+A stranger can clone the repo, run one command (`python -m src.cli --input examples/sample.json --use-mock-llm`) or one server (`uvicorn web.app:app`), see a decision package generated from sample input, approve it, and see the audit log entry.

@@ -14,6 +14,8 @@ Risk management needs an AI-supported workflow where experts can review and asse
 - **LLM generation with guardrails**: generates a JSON decision package, validates with Pydantic, retries once on invalid output, and only cites past case IDs that were retrieved.
 - **Human approval gate**: requires a reviewer name, records approve/reject with timestamp and reason in an append-only audit log (`audit_log.jsonl`).
 - **Deterministic tests**: LLM mocked; edge cases covered (incomplete inputs, non-existent cited IDs, missing reviewer).
+- **Web console (FastAPI + vanilla JS)**: an intake form, completeness and precedent view, a review step that records the decision, and a live audit log. No build step, no framework.
+- **Shared analysis pipeline**: the CLI and the web app call the same `analyze_risk_case` function, so behavior stays identical.
 - **CI**: GitHub Actions runs `ruff` and `pytest` on push/PR.
 
 ## Architecture
@@ -24,15 +26,20 @@ Risk Case (JSON)
   -> LLM (JSON-only, citations restricted to retrieved IDs)
   -> Decision Package (draft)
   -> Human Approval (required reviewer + audit log)
+
+Surfaces
+  -> CLI (src/cli.py)
+  -> Web console (web/app.py) -> shared src/pipeline.py
 ```
 
 ### Data flow
-1. Input `RiskCase` (JSON)
+1. Input `RiskCase` (JSON), from the CLI, the web form, or `examples/sample.json`
 2. `checker.py` validates required fields from `data/checklist.json` -> `CompletenessReport`
 3. `retriever.py` compares title+description+category against `data/past_decisions.json` -> top 3 `SimilarCase`
 4. `llm.py` prompts the model to return JSON matching `DecisionPackage`; validates schema, enforces cited IDs are a subset of retrieved IDs, retries once
-5. CLI writes the package to `out/decision_package_<id>.json` and prompts for approval
-6. `approval.py` writes an append-only record to `audit_log.jsonl`; sets status `approved`/`rejected`
+5. `pipeline.py` orchestrates steps 2-4 for any surface (`analyze_risk_case`)
+6. CLI writes the package to `out/decision_package_<id>.json`; the web console returns it to the browser
+7. `approval.py` writes an append-only record to `audit_log.jsonl`; sets status `approved`/`rejected`
 
 ## What the AI does / does not do
 **Does:**
@@ -98,6 +105,23 @@ Outputs:
 
 Example input: `examples/sample.json`. Mock data: `data/past_decisions.json` (15-20 fictional cases), `data/checklist.json`.
 
+## Web console
+
+A small FastAPI app serves a single-page review console. It uses the same analysis pipeline as the CLI and the mock LLM by default, so it runs offline with no API key.
+
+```bash
+uvicorn web.app:app --reload
+```
+
+Then open http://127.0.0.1:8000. The flow is:
+
+1. **Intake** — enter a risk case (or load the example).
+2. **Analysis** — see the completeness score, the missing fields and why they matter, the top 3 similar past decisions with similarity scores, and the draft package with open questions.
+3. **Review** — approve or reject. A reviewer name is required; the decision is stamped against that name.
+4. **Audit log** — every decision appears newest-first, read from the append-only `audit_log.jsonl`.
+
+The console is intentionally neutral in branding and depends only on the standard library plus FastAPI/uvicorn. Endpoints: `GET /api/past-decisions`, `POST /api/analyze`, `POST /api/review`, `GET /api/audit`.
+
 ## Tests
 ```bash
 pytest -q
@@ -109,6 +133,7 @@ Covers:
 - LLM: output validates; cited case IDs must exist in the retrieved set
 - Approval: requires a reviewer name; writes audit log; sets approved/rejected
 - CLI: non-interactive approve/reject persists status; no review leaves the package as a draft
+- Web: index served; analyze returns report + draft; incomplete input flagged; reviewer required; approve writes audit log and updates status; unknown package 404
 
 ## Lint
 ```bash
