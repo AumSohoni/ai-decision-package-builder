@@ -48,5 +48,5 @@ Given a messy, possibly incomplete risk report, produce a reviewable package tha
 ## Assumptions to confirm
 
 - The intended audience above (risk analyst; hiring reviewer) is inferred, not stated.
-- The tone ("calm ledger, not dashboard") was chosen for the use scene, not requested explicitly.
+- The tone ("dark operations console, not dashboard") was chosen for the use scene, not requested explicitly.
 - Swisscom-neutral branding is an inference from the application context; confirm before any public use.

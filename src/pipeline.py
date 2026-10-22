@@ -4,7 +4,7 @@ import uuid
 from dataclasses import dataclass
 
 from .checker import Checker
-from .llm import LLM, FakeLLMClient
+from .llm import LLM, FakeLLMClient, build_llm
 from .models import CompletenessReport, DecisionPackage, RiskCase, SimilarCase
 from .retriever import Retriever
 
@@ -42,6 +42,7 @@ def analyze_risk_case(
     risk_case: RiskCase,
     use_mock_llm: bool = True,
     llm: LLM | None = None,
+    model: str | None = None,
 ) -> Analysis:
     checker = Checker()
     completeness_report = checker.check(risk_case)
@@ -51,12 +52,10 @@ def analyze_risk_case(
 
     if llm is None:
         if use_mock_llm:
-            client = FakeLLMClient(
-                build_mock_package_dict(risk_case, completeness_report, similar_cases)
-            )
-            llm = LLM(client=client)
+            mock = build_mock_package_dict(risk_case, completeness_report, similar_cases)
+            llm = LLM(client=FakeLLMClient(mock))
         else:
-            llm = LLM()
+            llm = build_llm(use_mock=False, model=model)
 
     package = llm.generate_package(risk_case, completeness_report, similar_cases)
     return Analysis(

@@ -16,24 +16,29 @@ const SAMPLE = {
 const SECTIONS = ["intake", "analysis", "review", "audit"];
 const STEP_ORDER = ["intake", "analysis", "review"];
 
+const VIEW_META = {
+  intake: { label: "/ intake · case registration", title: "New risk review" },
+  analysis: { label: "/ analysis · automated assessment", title: "Analysis" },
+  review: { label: "/ decision · human authorization", title: "Your decision" },
+  audit: { label: "/ audit · append-only ledger", title: "Audit log" },
+};
+
 const state = {
   section: "intake",
   package: null,
   report: null,
   similar: [],
   busy: false,
+  useMock: true,
+  provider: { provider: "mock", model: "mock", real_available: false },
 };
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 const els = {
-  panels: Object.fromEntries(
-    SECTIONS.map((s) => [s, document.getElementById(`panel-${s}`)])
-  ),
-  nav: Object.fromEntries(
-    $$(".rail-link").map((b) => [b.dataset.nav, b])
-  ),
+  panels: Object.fromEntries(SECTIONS.map((s) => [s, document.getElementById(`panel-${s}`)])),
+  nav: Object.fromEntries($$(".rail-link").map((b) => [b.dataset.nav, b])),
   steps: $$(".step"),
   statusChip: $("#status-chip"),
   reviewStatus: $("#review-status"),
@@ -59,6 +64,20 @@ const els = {
   auditTable: $("#audit-table"),
   auditEmpty: $("#audit-empty"),
   live: $("#live-status"),
+  viewLabel: $("#view-label"),
+  viewTitle: $("#view-title"),
+  sysDot: $("#sys-dot"),
+  sysProvider: $("#sys-provider"),
+  sysModel: $("#sys-model"),
+  modeToggle: $("#real-ai-toggle"),
+  modeSub: $("#mode-sub"),
+  clock: $("#rail-clock"),
+  roEngine: $("#ro-engine"),
+  roCompleteness: $("#ro-completeness"),
+  roPrecedent: $("#ro-precedent"),
+  roLatency: $("#ro-latency"),
+  packageTag: $("#package-tag"),
+  analyzeLabel: $("#analyze-label"),
 };
 
 function announce(message) {
@@ -93,6 +112,8 @@ async function api(path, options) {
   return data;
 }
 
+/* ---------- Status ---------- */
+
 function setStatus(status) {
   const label = status.charAt(0).toUpperCase() + status.slice(1);
   els.statusChip.textContent = label;
@@ -100,14 +121,46 @@ function setStatus(status) {
   els.reviewStatus.textContent = label;
   els.reviewStatus.dataset.state = status;
   els.statusDot.hidden = status === "draft";
+  els.statusDot.textContent = label;
   els.statusDot.dataset.state = status;
 }
+
+function renderEngine() {
+  const p = state.provider;
+  if (state.useMock || !p.real_available) {
+    els.sysProvider.textContent = "mock";
+    els.sysModel.textContent = "offline · deterministic";
+    els.sysDot.dataset.live = "false";
+    els.modeSub.textContent = p.real_available ? `${p.provider} ready` : "no key set";
+    els.modeToggle.disabled = !p.real_available;
+  } else {
+    els.sysProvider.textContent = p.provider;
+    els.sysModel.textContent = p.model;
+    els.sysDot.dataset.live = "true";
+    els.modeSub.textContent = p.model;
+  }
+  els.roEngine.textContent = state.useMock || !p.real_available ? "mock" : p.provider;
+}
+
+async function loadProviderStatus() {
+  try {
+    state.provider = await api("/api/provider");
+  } catch {
+    state.provider = { provider: "mock", model: "mock", real_available: false };
+  }
+  if (state.provider.real_available && state.provider.default_mock === false) {
+    state.useMock = false;
+    els.modeToggle.checked = true;
+  }
+  renderEngine();
+}
+
+/* ---------- Navigation ---------- */
 
 function setStepState(section) {
   const index = STEP_ORDER.indexOf(section);
   els.steps.forEach((step) => {
-    const name = step.dataset.step;
-    const stepIndex = STEP_ORDER.indexOf(name);
+    const stepIndex = STEP_ORDER.indexOf(step.dataset.step);
     step.classList.remove("is-current", "is-done");
     if (section === "audit") {
       step.classList.add("is-done");
@@ -123,13 +176,15 @@ function navigate(section) {
   state.section = section;
 
   SECTIONS.forEach((name) => {
-    const panel = els.panels[name];
-    panel.hidden = name !== section;
+    els.panels[name].hidden = name !== section;
   });
 
   Object.entries(els.nav).forEach(([name, button]) => {
     button.classList.toggle("is-active", name === section);
   });
+
+  els.viewLabel.textContent = VIEW_META[section].label;
+  els.viewTitle.textContent = VIEW_META[section].title;
 
   setStepState(section);
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -152,19 +207,19 @@ function updateNavAvailability() {
 /* ---------- Form ---------- */
 
 function fillForm(data) {
-  const form = els.form;
-  form.elements.id.value = data.id || "";
-  form.elements.title.value = data.title || "";
-  form.elements.description.value = data.description || "";
-  form.elements.category.value = data.category || "";
-  form.elements.severity.value = data.severity || "";
-  form.elements.owner.value = data.owner || "";
-  form.elements.mitigation.value = data.mitigation || "";
-  form.elements.impact.value = data.impact || "";
-  form.elements.likelihood.value = data.likelihood || "";
-  form.elements.affected_assets.value = (data.affected_assets || []).join(", ");
-  form.elements.reported_date.value = data.reported_date || "";
-  form.elements.detection_method.value = data.detection_method || "";
+  const f = els.form.elements;
+  f.id.value = data.id || "";
+  f.title.value = data.title || "";
+  f.description.value = data.description || "";
+  f.category.value = data.category || "";
+  f.severity.value = data.severity || "";
+  f.owner.value = data.owner || "";
+  f.mitigation.value = data.mitigation || "";
+  f.impact.value = data.impact || "";
+  f.likelihood.value = data.likelihood || "";
+  f.affected_assets.value = (data.affected_assets || []).join(", ");
+  f.reported_date.value = data.reported_date || "";
+  f.detection_method.value = data.detection_method || "";
   els.formError.hidden = true;
 }
 
@@ -219,28 +274,33 @@ async function onAnalyze(event) {
     showFormError(problem);
     return;
   }
+
   els.formError.hidden = true;
   state.busy = true;
   els.analyzeBtn.classList.add("is-loading");
   els.analyzeBtn.disabled = true;
   els.analyzeBtn.setAttribute("aria-busy", "true");
-  announce("Analyzing risk case.");
+  const engine = state.useMock || !state.provider.real_available ? "mock" : state.provider.provider;
+  announce(`Running analysis with the ${engine} engine.`);
 
+  const started = performance.now();
   try {
-    const data = await api("/api/analyze", {
+    const data = await api(`/api/analyze?use_mock=${state.useMock ? "true" : "false"}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    const elapsed = Math.round(performance.now() - started);
+
     state.package = data.package;
     state.report = data.completeness_report;
     state.similar = data.similar_cases;
-    renderAnalysis(data);
+    renderAnalysis(data, elapsed);
     updateNavAvailability();
     resetReview();
     navigate("analysis");
     animateMeter();
-    announce("Analysis ready. Completeness and precedent shown.");
+    announce(`Analysis complete in ${elapsed} milliseconds.`);
   } catch (err) {
     showFormError(err.message);
     announce("Analysis failed.");
@@ -259,11 +319,16 @@ function showFormError(message) {
 
 /* ---------- Analysis render ---------- */
 
-function renderAnalysis(data) {
+function renderAnalysis(data, elapsed) {
   const report = data.completeness_report;
   const pkg = data.package;
 
-  $("#package-tag").textContent = pkg.package_id;
+  els.roEngine.textContent = data.used_mock ? "mock" : state.provider.provider;
+  els.roCompleteness.textContent = `${report.completeness_score}%`;
+  els.roPrecedent.textContent = `${data.similar_cases.length} cited`;
+  els.roLatency.textContent = elapsed !== undefined ? `${elapsed} ms` : "—";
+
+  els.packageTag.textContent = pkg.package_id;
   $("#score-value").textContent = report.completeness_score;
 
   const summary = $("#complete-summary");
@@ -297,7 +362,6 @@ function renderAnalysis(data) {
   similar.replaceChildren();
   data.similar_cases.forEach((c) => {
     const li = el("li", "similar-row");
-
     const id = el("span", "similar-id", c.id);
 
     const main = el("div", "similar-main");
@@ -411,12 +475,8 @@ function renderStamp(entry) {
   const status = state.package.status;
   els.stamp.dataset.state = status;
   els.stampMark.textContent = status;
-  els.stampTitle.textContent =
-    status === "approved" ? "Package approved" : "Package rejected";
-
-  const when = formatTimestamp(entry.timestamp);
-  els.stampMeta.textContent = `${entry.reviewer_name} · ${when} · ${entry.package_id}`;
-
+  els.stampTitle.textContent = status === "approved" ? "Package approved" : "Package rejected";
+  els.stampMeta.textContent = `${entry.reviewer_name} · ${formatTimestamp(entry.timestamp)} · ${entry.package_id}`;
   if (entry.reason) {
     els.stampReason.textContent = `Reason: ${entry.reason}`;
     els.stampReason.hidden = false;
@@ -446,7 +506,7 @@ async function refreshAudit() {
     renderAudit(data.entries);
   } catch (err) {
     els.auditEmpty.hidden = false;
-    els.auditTable.hidden = true;
+    els.auditTable.parentElement.hidden = true;
     els.auditEmpty.querySelector(".empty-title").textContent = "Audit log unavailable";
     els.auditEmpty.querySelector(".empty-body").textContent = err.message;
   }
@@ -457,7 +517,7 @@ function renderAudit(entries) {
   els.countAudit.hidden = entries.length === 0;
 
   if (entries.length === 0) {
-    els.auditTable.hidden = true;
+    els.auditTable.parentElement.hidden = true;
     els.auditEmpty.hidden = false;
     els.auditEmpty.querySelector(".empty-title").textContent = "No decisions recorded yet";
     els.auditEmpty.querySelector(".empty-body").textContent =
@@ -465,23 +525,20 @@ function renderAudit(entries) {
     return;
   }
 
-  els.auditTable.hidden = false;
+  els.auditTable.parentElement.hidden = false;
   els.auditEmpty.hidden = true;
   els.auditBody.replaceChildren();
 
   entries.forEach((entry) => {
     const tr = el("tr");
-    const when = el("td", "cell-time", formatTimestamp(entry.timestamp));
-    const pkg = el("td", "cell-id", entry.package_id);
-    const reviewer = el("td", "", entry.reviewer_name);
-    const action = el(
-      "td",
-      "cell-action",
-      entry.action === "approve" ? "approved" : "rejected"
+    tr.append(
+      el("td", "cell-time", formatTimestamp(entry.timestamp)),
+      el("td", "cell-id", entry.package_id),
+      el("td", "", entry.reviewer_name)
     );
+    const action = el("td", "cell-action", entry.action === "approve" ? "approved" : "rejected");
     action.dataset.state = entry.action === "approve" ? "approved" : "rejected";
-    const reason = el("td", "cell-reason", entry.reason || "—");
-    tr.append(when, pkg, reviewer, action, reason);
+    tr.append(action, el("td", "cell-reason", entry.reason || "—"));
     els.auditBody.append(tr);
   });
 }
@@ -499,9 +556,15 @@ function startNewReview() {
   resetReview();
   setStatus("draft");
   navigate("intake");
-  const first = els.form.elements.id;
-  if (first) first.focus();
+  els.form.elements.id.focus();
   announce("Started a new review.");
+}
+
+/* ---------- Clock ---------- */
+
+function tickClock() {
+  const now = new Date();
+  els.clock.textContent = `${now.toISOString().slice(11, 19)} UTC`;
 }
 
 /* ---------- Wiring ---------- */
@@ -520,6 +583,12 @@ $("#load-sample").addEventListener("click", () => {
   announce("Example risk case loaded.");
 });
 
+els.modeToggle.addEventListener("change", () => {
+  state.useMock = !els.modeToggle.checked;
+  renderEngine();
+  announce(state.useMock ? "Mock engine selected." : "Real AI engine selected.");
+});
+
 els.toReview.addEventListener("click", () => {
   navigate("review");
   els.reviewer.focus();
@@ -529,5 +598,8 @@ els.approveBtn.addEventListener("click", () => submitDecision("approve"));
 els.rejectBtn.addEventListener("click", () => submitDecision("reject"));
 $("#new-review").addEventListener("click", startNewReview);
 
+loadProviderStatus();
 updateNavAvailability();
 refreshAudit();
+tickClock();
+window.setInterval(tickClock, 1000);

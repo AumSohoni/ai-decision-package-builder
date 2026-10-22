@@ -12,9 +12,10 @@ Risk management needs an AI-supported workflow where experts can review and asse
 - **Completeness check (no AI)**: rule-based validation against a required-field checklist.
 - **Similar-case retrieval**: TF-IDF + cosine similarity (scikit-learn) to surface the top 3 past decisions.
 - **LLM generation with guardrails**: generates a JSON decision package, validates with Pydantic, retries once on invalid output, and only cites past case IDs that were retrieved.
+- **Provider-agnostic LLM layer**: OpenAI, Anthropic, or Google Gemini (via `google-genai`), selected automatically from whichever key is present. Mock client for offline runs.
 - **Human approval gate**: requires a reviewer name, records approve/reject with timestamp and reason in an append-only audit log (`audit_log.jsonl`).
 - **Deterministic tests**: LLM mocked; edge cases covered (incomplete inputs, non-existent cited IDs, missing reviewer).
-- **Web console (FastAPI + vanilla JS)**: an intake form, completeness and precedent view, a review step that records the decision, and a live audit log. No build step, no framework.
+- **Web console (FastAPI + vanilla JS)**: an intake form, completeness and precedent view, a review step that records the decision, and a live audit log. A toggle switches between the mock engine and real Gemini at request time. No build step, no framework.
 - **Shared analysis pipeline**: the CLI and the web app call the same `analyze_risk_case` function, so behavior stays identical.
 - **CI**: GitHub Actions runs `ruff` and `pytest` on push/PR.
 
@@ -74,10 +75,15 @@ pip install -r requirements.txt
 ```
 
 ## Environment variables
-If using a real LLM (not mock):
-- `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+If using a real LLM (not mock), set one of:
+- `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) — Google Gemini, the default real provider
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
 
-Create a local `.env` (never committed); keys are read from the process environment.
+Optional:
+- `GEMINI_MODEL` — override the default model (`gemini-flash-lite-latest`)
+
+Copy `.env.example` to `.env` and fill in your key. `.env` is gitignored; keys are read from the process environment only and never committed.
 
 ## Usage
 
@@ -107,7 +113,7 @@ Example input: `examples/sample.json`. Mock data: `data/past_decisions.json` (15
 
 ## Web console
 
-A small FastAPI app serves a single-page review console. It uses the same analysis pipeline as the CLI and the mock LLM by default, so it runs offline with no API key.
+A small FastAPI app serves a single-page review console. It uses the same analysis pipeline as the CLI and starts in mock mode, so it runs offline with no API key. If a key is present, the header's engine toggle switches the analysis to the real model for the next request.
 
 ```bash
 uvicorn web.app:app --reload
@@ -115,12 +121,12 @@ uvicorn web.app:app --reload
 
 Then open http://127.0.0.1:8000. The flow is:
 
-1. **Intake** — enter a risk case (or load the example).
+1. **Intake** — enter a risk case (or load the example). The header shows the active engine and model.
 2. **Analysis** — see the completeness score, the missing fields and why they matter, the top 3 similar past decisions with similarity scores, and the draft package with open questions.
 3. **Review** — approve or reject. A reviewer name is required; the decision is stamped against that name.
 4. **Audit log** — every decision appears newest-first, read from the append-only `audit_log.jsonl`.
 
-The console is intentionally neutral in branding and depends only on the standard library plus FastAPI/uvicorn. Endpoints: `GET /api/past-decisions`, `POST /api/analyze`, `POST /api/review`, `GET /api/audit`.
+The console is intentionally neutral in branding and depends only on the standard library plus FastAPI/uvicorn. Endpoints: `GET /api/provider`, `GET /api/past-decisions`, `POST /api/analyze?use_mock=true|false`, `POST /api/review`, `GET /api/audit`.
 
 ## Tests
 ```bash
@@ -133,7 +139,8 @@ Covers:
 - LLM: output validates; cited case IDs must exist in the retrieved set
 - Approval: requires a reviewer name; writes audit log; sets approved/rejected
 - CLI: non-interactive approve/reject persists status; no review leaves the package as a draft
-- Web: index served; analyze returns report + draft; incomplete input flagged; reviewer required; approve writes audit log and updates status; unknown package 404
+- Web: index served; provider status; analyze returns report + draft and reports mock mode; incomplete input flagged; reviewer required; approve writes audit log and updates status; unknown package 404
+- Gemini client: requires a key; falls back across models on 503; raises after all retries; prompt guards the output shape and restricts citations to retrieved IDs
 
 ## Lint
 ```bash
@@ -152,6 +159,7 @@ GitHub Actions workflow: `.github/workflows/ci.yml` runs `ruff check .` and `pyt
 - LLM retry is limited to 1 attempt
 - Mock dataset is fictional and small
 - A real run still needs an API key and network access
+- Gemini model aliases change over time; the client falls back across a list but a retired alias can still fail
 
 ## Next steps
 - Evaluation harness with 10 golden risk cases and a simple score tracked over time

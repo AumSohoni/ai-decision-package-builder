@@ -2,12 +2,23 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
+import urllib.request
 import uuid
 from typing import Any
 
 from pydantic import ValidationError
 
 from .models import CompletenessReport, DecisionPackage, RiskCase, SimilarCase
+
+GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest"
+GEMINI_FALLBACK_MODELS = [
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.6-flash",
+]
 
 
 class FakeLLMClient:
@@ -38,6 +49,87 @@ class FakeLLMClient:
         return json.dumps(pkg)
 
 
+class GeminiClient:
+    """Minimal Gemini client using the REST API and stdlib urllib.
+
+    Requests JSON output so the response can be validated like any other
+    provider. No third-party dependency required. Tries a fallback chain of
+    models so a single overloaded model (503) does not fail the run.
+    """
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout: int = 30,
+    ):
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.timeout = timeout
+        if not self.api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY is not set. Add it to your .env file or environment."
+            )
+        preferred = model or os.getenv("GEMINI_MODEL")
+        if preferred:
+            self.models = [preferred]
+        else:
+            self.models = list(GEMINI_FALLBACK_MODELS)
+        self.model = self.models[0]
+
+    def _post(self, model: str, prompt: str) -> str:
+        url = f"{GEMINI_API_BASE}/models/{model}:generateContent"
+        payload = json.dumps(
+            {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json"},
+            }
+        ).encode("utf-8")
+        request = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "x-goog-api-key": self.api_key,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            return response.read().decode("utf-8")
+
+    def generate(self, prompt: str) -> str:
+        last_error: Exception | None = None
+        for model in self.models:
+            for _attempt in range(2):  # one retry on transient overload
+                try:
+                    raw = self._post(model, prompt)
+                except urllib.error.HTTPError as e:
+                    detail = e.read().decode("utf-8", errors="replace")
+                    last_error = RuntimeError(
+                        f"Gemini API error {e.code} on {model}: {detail[:300]}"
+                    )
+                    if e.code in (429, 500, 502, 503, 504):
+                        continue  # try again, then next model
+                    raise last_error from e
+                except urllib.error.URLError as e:
+                    last_error = RuntimeError(f"Gemini API unreachable: {e.reason}")
+                    continue
+
+                data = json.loads(raw)
+                candidates = data.get("candidates") or []
+                if not candidates:
+                    last_error = RuntimeError(
+                        f"Gemini returned no candidates: {json.dumps(data)[:200]}"
+                    )
+                    continue
+                parts = candidates[0].get("content", {}).get("parts") or []
+                text = "".join(p.get("text", "") for p in parts)
+                if text.strip():
+                    self.model = model
+                    return text
+                last_error = RuntimeError("Gemini returned an empty response.")
+        raise last_error or RuntimeError("Gemini request failed.")
+
+
 class LLM:
     def __init__(self, client=None, model: str = "gpt-4o-mini", temperature: float = 0.0):
         self.client = client
@@ -65,30 +157,61 @@ class LLM:
             else:
                 sc.append(dict(s))
 
+        retrieved_ids = [s["id"] for s in sc]
+
+        # A concrete, exact output shape. Models drift when the schema is only
+        # described in prose; giving the literal keys prevents that.
+        output_example = {
+            "package_id": "PKG-XXXXXXXX",
+            "risk_case_id": rc.get("id"),
+            "summary": "Two or three sentences summarizing the risk and what a reviewer must weigh.",
+            "completeness_report": cr,
+            "missing_information": [
+                "One entry per missing checklist field, naming the field and why it matters."
+            ],
+            "similar_cases": [
+                {
+                    "id": "MUST be one of retrieved_similar_case_ids",
+                    "title": "title of the past case",
+                    "category": "category of the past case",
+                    "severity": "severity of the past case",
+                    "outcome": "how the past case was decided",
+                    "reasoning": "why this past case is relevant to the current one",
+                    "score": 0.0,
+                }
+            ],
+            "questions_for_experts": [
+                "A specific question a domain expert should answer before deciding."
+            ],
+            "status": "draft",
+        }
+
+        instructions = (
+            "You are preparing a structured decision package for a human reviewer. "
+            "Return ONLY a single JSON object, no prose, no markdown, no code fences. "
+            "Use EXACTLY the keys shown in 'output_example'. Do not add or rename fields. "
+            "Copy 'risk_case_id' and 'completeness_report' from the provided input verbatim. "
+            "For 'missing_information', use the 'field' values in the provided "
+            "completeness_report.missing list; keep it empty if that list is empty. "
+            "For 'similar_cases', include ONLY cases whose id is in "
+            "'retrieved_similar_case_ids'; never invent ids. If none are relevant, use []."
+            "You do not decide anything: always keep status as 'draft'."
+        )
+
         return json.dumps(
             {
-                "instruction": (
-                    "You are preparing a structured decision package for human review. "
-                    "Return ONLY valid JSON matching the DecisionPackage schema. "
-                    "You may ONLY cite past cases whose ids are in 'retrieved_similar_case_ids'. "
-                    "Do not invent past cases. Do not approve or reject. "
-                    "Keep status as 'draft' unless explicitly told otherwise."
-                ),
+                "instruction": instructions,
+                "output_example": output_example,
                 "risk_case": rc,
                 "completeness_report": cr,
                 "retrieved_similar_cases": sc,
-                "retrieved_similar_case_ids": [s["id"] for s in sc],
+                "retrieved_similar_case_ids": retrieved_ids,
             },
             indent=2,
         )
 
     def _call_client(self, prompt: str) -> str:
         if self.client is None:
-            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
-            if not api_key:
-                raise RuntimeError(
-                    "No LLM client provided and no API key found in environment."
-                )
             if os.getenv("OPENAI_API_KEY"):
                 from openai import OpenAI
 
@@ -100,16 +223,24 @@ class LLM:
                     response_format={"type": "json_object"},
                 )
                 return resp.choices[0].message.content
-            from anthropic import Anthropic
+            if os.getenv("ANTHROPIC_API_KEY"):
+                from anthropic import Anthropic
 
-            self.client = Anthropic()
-            resp = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                temperature=self.temperature,
-                max_tokens=2048,
-                messages=[{"role": "user", "content": prompt}],
+                self.client = Anthropic()
+                resp = self.client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    temperature=self.temperature,
+                    max_tokens=2048,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                return resp.content[0].text if resp.content else "{}"
+            if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                self.client = GeminiClient()
+                return self.client.generate(prompt)
+            raise RuntimeError(
+                "No LLM client provided and no API key found in environment "
+                "(set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)."
             )
-            return resp.content[0].text if resp.content else "{}"
 
         if hasattr(self.client, "generate"):
             return self.client.generate(prompt)
@@ -175,3 +306,62 @@ class LLM:
                 continue
 
         raise last_error or RuntimeError("Failed to generate valid decision package.")
+
+
+def _load_env() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:  # dotenv is optional at runtime
+        return
+    load_dotenv()
+
+
+def available_provider() -> str | None:
+    """Return the real provider that has a key configured, if any."""
+    _load_env()
+    if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+        return "gemini"
+    if os.getenv("OPENAI_API_KEY"):
+        return "openai"
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return "anthropic"
+    return None
+
+
+def provider_status() -> dict[str, Any]:
+    """Describe which LLM the app will use, for display in the UI."""
+    _load_env()
+    provider = available_provider()
+    if provider == "gemini":
+        model = os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+    elif provider == "openai":
+        model = "gpt-4o-mini"
+    elif provider == "anthropic":
+        model = "claude-3-5-sonnet"
+    else:
+        model = "mock"
+    return {
+        "provider": provider or "mock",
+        "model": model,
+        "real_available": provider is not None,
+    }
+
+
+def build_llm(use_mock: bool = True, model: str | None = None) -> LLM:
+    """Build an LLM for the given mode.
+
+    Mock mode is deterministic and offline. Real mode picks whichever
+    provider has a key configured (Gemini by default here).
+    """
+    _load_env()
+    if use_mock:
+        return LLM(client=FakeLLMClient())
+    provider = available_provider()
+    if provider is None:
+        raise RuntimeError(
+            "Real AI requested but no API key found. Set GEMINI_API_KEY in .env, "
+            "or switch back to mock mode."
+        )
+    if provider == "gemini":
+        return LLM(client=GeminiClient(model=model))
+    return LLM(model=model) if model else LLM()

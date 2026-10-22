@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 
 from src.approval import ApprovalGate
+from src.llm import provider_status
 from src.models import DecisionPackage, RiskCase
 from src.pipeline import analyze_risk_case
 from src.retriever import Retriever
@@ -43,17 +44,24 @@ def create_app(
     def past_decisions() -> dict[str, Any]:
         return {"cases": Retriever().past_decisions}
 
+    @app.get("/api/provider")
+    def provider() -> dict[str, Any]:
+        status = provider_status()
+        status["default_mock"] = app.state.use_mock_llm
+        return status
+
     @app.post("/api/analyze")
-    def analyze(payload: dict[str, Any]) -> dict[str, Any]:
+    def analyze(payload: dict[str, Any], use_mock: bool | None = None) -> dict[str, Any]:
         try:
             risk_case = RiskCase.model_validate(payload)
         except ValidationError as e:
             raise HTTPException(status_code=422, detail=json.loads(e.json())) from e
 
+        mock = app.state.use_mock_llm if use_mock is None else use_mock
         try:
-            analysis = analyze_risk_case(risk_case, use_mock_llm=app.state.use_mock_llm)
+            analysis = analyze_risk_case(risk_case, use_mock_llm=mock)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            raise HTTPException(status_code=502, detail=str(e)) from e
 
         app.state.packages[analysis.package.package_id] = analysis.package
         return {
@@ -61,6 +69,7 @@ def create_app(
             "completeness_report": analysis.completeness_report.model_dump(),
             "similar_cases": [s.model_dump() for s in analysis.similar_cases],
             "package": analysis.package.model_dump(mode="json"),
+            "used_mock": mock,
         }
 
     @app.post("/api/review")

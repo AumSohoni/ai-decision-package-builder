@@ -110,3 +110,19 @@ def test_review_rejects_invalid_action(client):
         json={"package_id": pkg["package_id"], "reviewer_name": "Jane", "action": "maybe"},
     )
     assert res.status_code == 400
+
+
+def test_provider_status_endpoint(client):
+    res = client.get("/api/provider")
+    assert res.status_code == 200
+    body = res.json()
+    assert "provider" in body
+    assert "real_available" in body
+    assert body["default_mock"] is True
+
+
+def test_analyze_reports_mock_mode(client):
+    res = client.post("/api/analyze?use_mock=true", json=sample_case())
+    assert res.status_code == 200
+    assert res.json()["used_mock"] is True
+

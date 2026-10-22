@@ -3,73 +3,95 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Decision Desk — Risk review</title>
+  <title>Decision Desk — Risk Operations Console</title>
   <meta name="description" content="AI-prepared decision packages for human review. AI prepares. Humans decide.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='6' fill='%23121714'/%3E%3Cpath d='M8 9.5h12M8 14h12M8 18.5h7' stroke='%23e6ebe5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1210'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h8' stroke='%233ddc97' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
   <div class="shell">
-    <aside class="rail">
+    <aside class="rail" aria-label="Console navigation">
       <div class="rail-brand">
-        <svg class="mark" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <rect x="1.25" y="1.25" width="25.5" height="25.5" rx="6" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M8 9.5h12M8 14h12M8 18.5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <svg class="mark" width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="7" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M9 11h14M9 16h14M9 21h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
         <div class="brand-text">
           <span class="brand-name">Decision Desk</span>
-          <span class="brand-sub">Risk review console</span>
+          <span class="brand-sub">Risk operations</span>
         </div>
       </div>
 
-      <nav class="rail-nav" aria-label="Sections">
+      <div class="sys-status" id="sys-status">
+        <span class="sys-dot" id="sys-dot" aria-hidden="true"></span>
+        <div class="sys-copy">
+          <span class="sys-line"><span id="sys-provider">mock</span> engine</span>
+          <span class="sys-sub mono" id="sys-model">offline · deterministic</span>
+        </div>
+      </div>
+
+      <nav class="rail-nav">
         <button class="rail-link is-active" type="button" data-nav="intake">
-          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 3h8l4 4v10H4V3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 3v4h4M7 11h6M7 14h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          <span>Intake</span>
+          <span class="led" data-led="intake" aria-hidden="true"></span>
+          <span class="rail-label">Intake</span>
+          <span class="rail-index mono">01</span>
         </button>
         <button class="rail-link" type="button" data-nav="analysis" disabled>
-          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16V9M8 16V4M13 16v-5M18 16V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          <span>Analysis</span>
-          <span class="rail-count" id="count-similar" hidden></span>
+          <span class="led" data-led="analysis" aria-hidden="true"></span>
+          <span class="rail-label">Analysis</span>
+          <span class="rail-count mono" id="count-similar" hidden></span>
+          <span class="rail-index mono">02</span>
         </button>
         <button class="rail-link" type="button" data-nav="review" disabled>
-          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10.5 8 14.5 16 5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Review</span>
-          <span class="rail-dot" id="status-dot" hidden></span>
+          <span class="led" data-led="review" aria-hidden="true"></span>
+          <span class="rail-label">Decision</span>
+          <span class="rail-count mono" id="status-dot" hidden></span>
+          <span class="rail-index mono">03</span>
         </button>
         <button class="rail-link" type="button" data-nav="audit">
-          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M10 6v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <span>Audit log</span>
-          <span class="rail-count" id="count-audit" hidden></span>
+          <span class="led" data-led="audit" aria-hidden="true"></span>
+          <span class="rail-label">Audit log</span>
+          <span class="rail-count mono" id="count-audit" hidden></span>
+          <span class="rail-index mono">04</span>
         </button>
       </nav>
 
       <div class="rail-foot">
+        <div class="rail-clock mono" id="rail-clock">--:--:-- UTC</div>
         <p class="rail-motto">AI prepares.<br>Humans decide.</p>
-        <p class="rail-meta"><span class="mono" id="model-badge">mock model</span><br>20 fictional past decisions</p>
+        <p class="rail-meta mono">20 archived decisions</p>
       </div>
     </aside>
 
     <main class="work" id="main">
       <header class="work-head">
         <div class="head-copy">
-          <h1>New risk review</h1>
-          <p class="work-sub">Describe the risk. The console checks completeness, finds precedent, and drafts the package for your decision.</p>
+          <p class="eyebrow mono" id="view-label">/ intake · case registration</p>
+          <h1 id="view-title">New risk review</h1>
+          <p class="work-sub">Describe the risk. The console validates completeness, retrieves precedent, and drafts a package — then a human decides.</p>
         </div>
         <div class="head-aside">
+          <label class="mode-switch" title="Choose the engine used for the next analysis">
+            <input type="checkbox" id="real-ai-toggle" class="mode-input">
+            <span class="mode-track" aria-hidden="true"><span class="mode-knob"></span></span>
+            <span class="mode-text">
+              <span class="mode-title">Real AI</span>
+              <span class="mode-sub mono" id="mode-sub">Gemini</span>
+            </span>
+          </label>
           <span class="status-chip" id="status-chip" data-state="draft">Draft</span>
         </div>
       </header>
 
       <ol class="steps" aria-label="Review progress">
-        <li class="step is-current" data-step="intake"><span class="step-mark">1</span><span>Intake</span></li>
-        <li class="step" data-step="analysis"><span class="step-mark">2</span><span>Analysis</span></li>
-        <li class="step" data-step="review"><span class="step-mark">3</span><span>Review</span></li>
+        <li class="step is-current" data-step="intake"><span class="step-mark mono">01</span><span>Intake</span></li>
+        <li class="step" data-step="analysis"><span class="step-mark mono">02</span><span>Analysis</span></li>
+        <li class="step" data-step="review"><span class="step-mark mono">03</span><span>Decision</span></li>
       </ol>
 
       <!-- INTAKE -->
@@ -149,7 +171,9 @@
 
           <div class="form-foot">
             <p class="form-hint">Blank optional fields are reported by the completeness check, not blocked.</p>
-            <button class="btn btn-primary" type="submit" id="analyze-btn">Analyze risk</button>
+            <button class="btn btn-primary" type="submit" id="analyze-btn">
+              <span id="analyze-label">Run analysis</span>
+            </button>
           </div>
           <p class="form-error" id="form-error" role="alert" hidden></p>
         </form>
@@ -159,13 +183,32 @@
       <section class="panel" id="panel-analysis" aria-labelledby="analysis-title" hidden>
         <div class="panel-head">
           <h2 id="analysis-title">Analysis</h2>
-          <span class="mono panel-tag" id="package-tag"></span>
+          <span class="panel-tag mono" id="package-tag"></span>
+        </div>
+
+        <div class="readout" id="readout">
+          <div class="readout-cell">
+            <span class="readout-label">Engine</span>
+            <span class="readout-value mono" id="ro-engine">—</span>
+          </div>
+          <div class="readout-cell">
+            <span class="readout-label">Completeness</span>
+            <span class="readout-value mono" id="ro-completeness">—</span>
+          </div>
+          <div class="readout-cell">
+            <span class="readout-label">Precedent</span>
+            <span class="readout-value mono" id="ro-precedent">—</span>
+          </div>
+          <div class="readout-cell">
+            <span class="readout-label">Latency</span>
+            <span class="readout-value mono" id="ro-latency">—</span>
+          </div>
         </div>
 
         <div class="analysis-block">
           <h3>Completeness</h3>
           <div class="complete">
-            <p class="complete-score"><span id="score-value">—</span><span class="complete-unit">%</span></p>
+            <p class="complete-score mono"><span id="score-value">—</span><span class="complete-unit">%</span></p>
             <div class="complete-body">
               <p class="complete-summary" id="complete-summary"></p>
               <div class="meter" aria-hidden="true">
@@ -177,7 +220,7 @@
         </div>
 
         <div class="analysis-block">
-          <h3>Precedent <span class="block-note" id="similar-note"></span></h3>
+          <h3>Precedent <span class="block-note mono" id="similar-note"></span></h3>
           <ul class="similar-list" id="similar-list"></ul>
         </div>
 
@@ -198,7 +241,7 @@
 
         <div class="analysis-foot">
           <p class="foot-note">Only retrieved precedent is cited. The draft is never an approval.</p>
-          <button class="btn btn-primary" type="button" id="to-review">Continue to review</button>
+          <button class="btn btn-primary" type="button" id="to-review">Continue to decision</button>
         </div>
       </section>
 
@@ -232,7 +275,7 @@
           <div class="stamp-mark" id="stamp-mark" aria-hidden="true"></div>
           <div class="stamp-body">
             <p class="stamp-title" id="stamp-title"></p>
-            <p class="stamp-meta" id="stamp-meta"></p>
+            <p class="stamp-meta mono" id="stamp-meta"></p>
             <p class="stamp-reason" id="stamp-reason"></p>
           </div>
         </div>
@@ -247,7 +290,7 @@
       <section class="panel" id="panel-audit" aria-labelledby="audit-title" hidden>
         <div class="panel-head">
           <h2 id="audit-title">Audit log</h2>
-          <span class="mono panel-tag">append-only</span>
+          <span class="panel-tag mono">append-only</span>
         </div>
         <p class="review-intro">Every approval and rejection is written here with who, when, and why.</p>
 
